@@ -41,6 +41,8 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
   void dispose() {
     print('[EgitimDetayEkrani] dispose çağrıldı.');
     _pageController.dispose();
+    // Provider'ı burada resetlemeye gerek yok, initState'te zaten egitimDetayiniGetir ile sıfırlanıyor.
+    // Eğer ekran pop edildiğinde resetlemek isteniyorsa, appBar'daki onPressed içinde yapılıyor.
     super.dispose();
   }
 
@@ -50,7 +52,16 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
     print('[EgitimDetayEkrani] build çağrıldı. isLoading: ${egitimDetayProvider.isLoading}, Adım Sayısı: ${egitimDetayProvider.egitimDetay?.adimlar.length ?? "Detay Yok"}, Mevcut Adım Index: ${egitimDetayProvider.mevcutAdimIndex}');
 
     return Scaffold(
-      appBar: AppBar( /* ... AppBar kodu aynı ... */ ),
+      appBar: AppBar(
+        title: Text(widget.egitimAdi, style: MetinStilleri.appBarBaslik),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new, color: Renkler.ikonRengi),
+          onPressed: () {
+            Provider.of<EgitimDetayProvider>(context, listen: false).resetAdim();
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
       body: _buildBody(egitimDetayProvider, context),
       bottomNavigationBar: egitimDetayProvider.egitimDetay != null &&
                              !egitimDetayProvider.isLoading &&
@@ -65,23 +76,72 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
       print('[EgitimDetayEkrani] _buildBody: Yükleniyor...');
       return const Center(child: CircularProgressIndicator());
     }
+
     if (provider.hataMesaji != null && provider.egitimDetay == null) {
-       print('[EgitimDetayEkrani] _buildBody: Hata Mesajı: ${provider.hataMesaji}');
-      return Center( /* ... Hata mesajı ... */ );
+      print('[EgitimDetayEkrani] _buildBody: Hata Mesajı: ${provider.hataMesaji}');
+      return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(provider.hataMesaji!, textAlign: TextAlign.center, style: MetinStilleri.govdeMetni.copyWith(color: Renkler.hataRengi)),
+          )
+      );
     }
+
     if (provider.egitimDetay == null || provider.egitimDetay!.adimlar.isEmpty) {
       print('[EgitimDetayEkrani] _buildBody: Eğitim adımları bulunamadı veya detay null.');
-      return Center( /* ... Eğitim adımları bulunamadı ... */ );
+      return Center(
+        child: Text('Eğitim adımları yükleniyor veya bulunamadı.', style: MetinStilleri.govdeMetniIkincil),
+      );
     }
+
     print('[EgitimDetayEkrani] _buildBody: PageView oluşturuluyor. Adım sayısı: ${provider.egitimDetay!.adimlar.length}. Mevcut Index: ${provider.mevcutAdimIndex}');
-    if (_pageController.hasClients && _pageController.page?.round() != provider.mevcutAdimIndex) {
+    if (_pageController.hasClients &&_pageController.page?.round() != provider.mevcutAdimIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
           if(_pageController.hasClients) {
                _pageController.jumpToPage(provider.mevcutAdimIndex);
           }
       });
     }
-    return Column( /* ... Column içeriği aynı ... */ );
+
+    return Column(
+      children: [
+        if (provider.egitimDetay!.adimlar.length > 1)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Text(
+                    widget.egitimAdi,
+                    style: MetinStilleri.altBaslik.copyWith(fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  'Adım ${provider.mevcutAdimIndex + 1}/${provider.egitimDetay!.adimlar.length}',
+                  style: MetinStilleri.kucukMetin.copyWith(color: Renkler.vurguRenk),
+                ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: provider.egitimDetay!.adimlar.length,
+            onPageChanged: (index) {
+              print('[EgitimDetayEkrani] PageView onPageChanged: index $index');
+              provider.setMevcutAdimIndexFromPageView(index);
+            },
+            itemBuilder: (context, index) {
+              final EgitimAdimModel adim = provider.egitimDetay!.adimlar[index];
+              print('[EgitimDetayEkrani] PageView itemBuilder: Adım $index (${adim.adimSira}) oluşturuluyor.');
+              return _buildAdimSayfasi(adim, context);
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildAdimSayfasi(EgitimAdimModel adim, BuildContext context) {
@@ -91,32 +151,85 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
       String gelenYol = adim.adimFotograf!;
       
       if (gelenYol.startsWith('/images/egitim_adimlari/')) {
-        // Eğer zaten doğru formatta geliyorsa (örn: /images/egitim_adimlari/kalp_masaji/1.png)
         tamFotografPath += gelenYol;
       } else if (gelenYol.startsWith('/images/')) {
-        // Eğer sadece "/images/KONU/resim.png" formatında geliyorsa (örn: /images/yanik/1.png)
-        String duzeltilmisYol = gelenYol.replaceFirst('/images/', '/images/egitim_adimlari/');
-        tamFotografPath += duzeltilmisYol;
+        String konuKlasoruVeResim = gelenYol.substring('/images/'.length);
+        tamFotografPath += '/images/egitim_adimlari/' + konuKlasoruVeResim;
       } else if (gelenYol.startsWith('/')) { 
-          // Başka bir / ile başlayan yol (beklenmedik ama genel fallback)
           tamFotografPath += gelenYol; 
       } else { 
-          // Hiç / ile başlamıyorsa, tam yolu oluşturmaya çalış (en kötü senaryo)
-          // Bu durumda API'den gelen yolun sadece "konu_klasoru/resim.png" gibi olduğunu varsayıyoruz.
-          tamFotografPath += '/images/egitim_adimlari/$gelenYol';
+          tamFotografPath += '/images/egitim_adimlari/' + gelenYol;
       }
     } else {
       tamFotografPath = '';
     }
     print('[EgitimDetayEkrani] _buildAdimSayfasi - Adım: ${adim.adimSira}, Oluşturulan Foto URL: $tamFotografPath');
 
-    return Padding( /* ... Padding ve içindeki Column yapısı aynı ... */ );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (tamFotografPath.isNotEmpty)
+            Expanded(
+              flex: 5, // Resim için daha fazla alan
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16.0),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12.0),
+                  child: tamFotografPath.toLowerCase().endsWith('.svg')
+                      ? SvgPicture.network(
+                          tamFotografPath,
+                          fit: BoxFit.contain,
+                          placeholderBuilder: (_) => const Center(child: CircularProgressIndicator(strokeWidth: 2.0)),
+                        )
+                      : Image.network(
+                          tamFotografPath,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(child: CircularProgressIndicator(strokeWidth: 2.0));
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            print('[EgitimDetayEkrani] Adım ${adim.adimSira} Image.network Yükleme Hatası: $error URL: $tamFotografPath');
+                            return Center(child: Icon(Icons.broken_image_outlined, size: 60, color: Colors.grey[350]));
+                          },
+                        ),
+                ),
+              ),
+            )
+          else if (adim.adimFotograf != null && adim.adimFotograf!.isNotEmpty) // Yol vardı ama tamFotografPath oluşturulamadı
+            Expanded(flex: 5, child: Center(child: Text("Resim yüklenemedi.", style: MetinStilleri.kucukMetin.copyWith(color: Renkler.hataRengi))))
+          else
+            const SizedBox.shrink(), // Fotoğraf yoksa boşluk bırakma, metin yukarı kaysın
+
+          Expanded(
+            flex: 4, // Metin için ayrılan alan
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: (adim.adimAciklama != null && adim.adimAciklama!.isNotEmpty)
+                    ? Text(
+                        adim.adimAciklama!,
+                        style: MetinStilleri.govdeMetni.copyWith(fontSize: 17, height: 1.65, color: Renkler.anaMetinRengi),
+                        textAlign: TextAlign.left,
+                      )
+                    : Center(child: Text("Bu adım için açıklama bulunmamaktadır.", style: MetinStilleri.govdeMetniIkincil)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildBottomButton(EgitimDetayProvider provider, BuildContext context) {
-    // ... (Bu metodun içeriği önceki YAML'daki gibi kalabilir) ...
-    // Sadece Flutter formatına uygun olması için içeriği tekrar ekliyorum.
     bool sonAdim = provider.sonAdimdaMi;
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -148,7 +261,7 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
                _pageController.animateToPage(
                  provider.mevcutAdimIndex,
                  duration: const Duration(milliseconds: 350),
-                 curve: Curves.easeOutCubic,
+                 curve: Curves.easeOutCubic, // Daha yumuşak bir geçiş
                );
              }
           }
