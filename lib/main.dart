@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'ekranlar/auth/login_ekrani.dart';
-// import 'ekranlar/egitim/egitim_listesi_ekrani.dart'; // Artık AnaSayfaYoneticisi'ne gidilecek
 import 'ekranlar/ana_sayfa_yonetici.dart'; // Yeni ana ekran
-import 'providerlar/auth_provider.dart';
+import 'providerlar/auth_provider.dart';  
 import 'providerlar/egitim_provider.dart';
 import 'providerlar/egitim_detay_provider.dart';
 import 'providerlar/test_provider.dart';
