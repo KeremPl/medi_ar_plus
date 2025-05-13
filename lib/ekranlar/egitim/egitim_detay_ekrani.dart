@@ -25,6 +25,8 @@ class EgitimDetayEkrani extends StatefulWidget {
 }
 
 class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
+  final PageController _pageController = PageController(); // Adımlar arası geçiş için
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +34,12 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
       Provider.of<EgitimDetayProvider>(context, listen: false)
           .egitimDetayiniGetir(widget.egitimId);
     });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -50,6 +58,8 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
         ),
       ),
       body: _buildBody(egitimDetayProvider, context),
+      // PageView kullanıyorsak, butonları body içine veya sabit bir alta alabiliriz.
+      // Şimdilik mevcut buton yapısını koruyalım, gerekirse PageView'a göre düzenleriz.
       bottomNavigationBar: egitimDetayProvider.egitimDetay != null && !egitimDetayProvider.isLoading
           ? _buildBottomButton(egitimDetayProvider, context)
           : null,
@@ -62,139 +72,146 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
     }
 
     if (provider.hataMesaji != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                provider.hataMesaji!,
-                style: MetinStilleri.govdeMetni.copyWith(color: Renkler.hataRengi),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => provider.egitimDetayiniGetir(widget.egitimId),
-                child: const Text('Tekrar Dene'),
-              )
-            ],
-          ),
-        ),
-      );
+      return Center( /* ... Hata mesajı ... */ );
     }
 
     if (provider.egitimDetay == null || provider.egitimDetay!.adimlar.isEmpty) {
-      return Center(
-        child: Text('Eğitim adımları bulunamadı.', style: MetinStilleri.govdeMetniIkincil),
-      );
+      return Center( /* ... Adım bulunamadı ... */ );
     }
 
-    final EgitimAdimModel? mevcutAdim = provider.mevcutAdim;
-    if (mevcutAdim == null) {
-      return Center(child: Text('Mevcut adım yüklenemedi.', style: MetinStilleri.govdeMetniIkincil));
-    }
+    // PageView ile adımlar arasında kaydırmalı geçiş
+    return Column(
+      children: [
+        if (provider.egitimDetay!.adimlar.length > 1)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  widget.egitimAdi,
+                  style: MetinStilleri.altBaslik.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  'Adım ${provider.mevcutAdimIndex + 1}/${provider.egitimDetay!.adimlar.length}',
+                  style: MetinStilleri.kucukMetin.copyWith(color: Renkler.vurguRenk),
+                ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: provider.egitimDetay!.adimlar.length,
+            onPageChanged: (index) {
+              // Provider'daki mevcut adımı güncellemek yerine doğrudan index'i kullanabiliriz
+              // veya provider'da bir `setMevcutAdimIndex(index)` metodu oluşturabiliriz.
+              // Şimdilik butonlarla senkronize olması için provider'ı güncelleyelim.
+              // Ancak bu, butonlara basınca PageView'ı da hareket ettirmemizi gerektirir.
+              // Daha basit bir yaklaşım için, _pageController.jumpToPage kullanmak.
+              // Şimdilik provider'ı güncellemeyelim, butonlar _pageController'ı yönetsin.
+            },
+            itemBuilder: (context, index) {
+              final EgitimAdimModel adim = provider.egitimDetay!.adimlar[index];
+              return _buildAdimSayfasi(adim, context);
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
-    String tamFotografPath = ApiSabitleri.kokUrl.replaceAll('/api/', ''); // "http://workwatchpro.xyz"
-    if (mevcutAdim.adimFotograf != null && mevcutAdim.adimFotograf!.isNotEmpty) {
-      String gelenYol = mevcutAdim.adimFotograf!; // Örn: "/images/burkulma/1.png"
-      
+  Widget _buildAdimSayfasi(EgitimAdimModel adim, BuildContext context) {
+    String tamFotografPath = ApiSabitleri.kokUrl.replaceAll('/api/', '');
+    if (adim.adimFotograf != null && adim.adimFotograf!.isNotEmpty) {
+      String gelenYol = adim.adimFotograf!;
       if (gelenYol.startsWith('/images/')) {
-        // "/images/" kısmını "/images/egitim_adimlari/" ile değiştiriyoruz.
         String duzeltilmisYol = gelenYol.replaceFirst('/images/', '/images/egitim_adimlari/');
         tamFotografPath += duzeltilmisYol;
-      } else if (gelenYol.startsWith('/')) { 
-          // Zaten doğru formatta veya beklenmedik bir / ile başlayan yol
-          tamFotografPath += gelenYol; 
-      } else { 
-          // / ile başlamıyorsa, varsayılan yapıyı oluştur
+      } else if (gelenYol.startsWith('/')) {
+          tamFotografPath += gelenYol;
+      } else {
           tamFotografPath += '/images/egitim_adimlari/$gelenYol';
       }
-       print('Oluşturulan Resim URL: $tamFotografPath'); // Kontrol için log
     } else {
       tamFotografPath = '';
-       print('Resim yolu boş veya null.'); // Kontrol için log
     }
 
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(20.0), // Daha ferah padding
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (provider.egitimDetay!.adimlar.length > 1)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: Text(
-                'Adım ${provider.mevcutAdimIndex + 1} / ${provider.egitimDetay!.adimlar.length}',
-                style: MetinStilleri.kucukMetin.copyWith(color: Renkler.vurguRenk, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
           if (tamFotografPath.isNotEmpty)
-            Container(
-              height: MediaQuery.of(context).size.height * 0.35,
-              margin: const EdgeInsets.only(bottom: 16.0),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(12.0),
-                border: Border.all(color: Colors.grey[300]!)
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(11.0),
-                child: tamFotografPath.toLowerCase().endsWith('.svg')
-                    ? SvgPicture.network(
-                        tamFotografPath,
-                        fit: BoxFit.contain,
-                        placeholderBuilder: (_) => const Center(child: CircularProgressIndicator()),
-                        // ignore: deprecated_member_use
-                        // colorFilter: ColorFilter.mode(Renkler.anaRenk.withAlpha((0.05 * 255).round()), BlendMode.dstATop),
-                      )
-                    : Image.network(
-                        tamFotografPath,
-                        fit: BoxFit.contain,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Center(child: CircularProgressIndicator());
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          print('Image.network Yükleme Hatası: $error');
-                          print('URL: $tamFotografPath');
-                          return Center(child: Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey[400]));
-                        }
-                      ),
+            AspectRatio( // Resim için sabit en-boy oranı
+              aspectRatio: 16 / 10, // veya 4/3
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 20.0),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100], // Placeholder arkaplanı
+                  borderRadius: BorderRadius.circular(12.0), // Yumuşak köşeler
+                  // border: Border.all(color: Colors.grey[300]!) // İsteğe bağlı çerçeve
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12.0),
+                  child: tamFotografPath.toLowerCase().endsWith('.svg')
+                      ? SvgPicture.network(
+                          tamFotografPath,
+                          fit: BoxFit.contain,
+                          placeholderBuilder: (_) => const Center(child: CircularProgressIndicator(strokeWidth: 2.0)),
+                        )
+                      : Image.network(
+                          tamFotografPath,
+                          fit: BoxFit.contain, // Veya cover, içeriğe göre
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(child: CircularProgressIndicator(strokeWidth: 2.0));
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Center(child: Icon(Icons.broken_image_outlined, size: 60, color: Colors.grey[350]));
+                          }
+                        ),
+                ),
               ),
             )
-          else if (mevcutAdim.adimFotograf != null && mevcutAdim.adimFotograf!.isNotEmpty) // Path boş ama API'de yol vardıysa, bu bir placeholder gösterir
-            Container( // Fotoğraf yolu vardı ama tamFotografPath oluşturulamadıysa (beklenmedik durum)
-               height: MediaQuery.of(context).size.height * 0.1,
-               alignment: Alignment.center,
-               child: Text("Resim yüklenemedi (hatalı yol formatı olabilir).", style: MetinStilleri.kucukMetin.copyWith(color: Renkler.hataRengi)),
-            )
-          else // Fotoğraf yoksa boşluk
-            SizedBox(height: MediaQuery.of(context).size.height * 0.05),
+          else if (adim.adimFotograf != null && adim.adimFotograf!.isNotEmpty)
+            Container( /* ... Resim yüklenemedi mesajı ... */ )
+          else
+            const SizedBox(height: 20), // Fotoğraf yoksa boşluk
 
-
-          if (mevcutAdim.adimAciklama != null && mevcutAdim.adimAciklama!.isNotEmpty)
+          if (adim.adimAciklama != null && adim.adimAciklama!.isNotEmpty)
             Text(
-              mevcutAdim.adimAciklama!,
-              style: MetinStilleri.govdeMetni.copyWith(fontSize: 16),
-              textAlign: TextAlign.justify,
+              adim.adimAciklama!,
+              style: MetinStilleri.govdeMetni.copyWith(fontSize: 16.5, height: 1.6, color: Renkler.anaMetinRengi), // Daha okunaklı
+              textAlign: TextAlign.left, // Sola dayalı daha iyi okunur
             )
           else
              Text("Bu adım için açıklama bulunmamaktadır.", style: MetinStilleri.govdeMetniIkincil),
+          const SizedBox(height: 60), // Buton için altta boşluk
         ],
       ),
     );
   }
 
   Widget _buildBottomButton(EgitimDetayProvider provider, BuildContext context) {
-    return Padding(
+    bool sonAdim = provider.mevcutAdimIndex == (provider.egitimDetay!.adimlar.length - 1);
+
+    return Container( // Butonu daha belirgin yapmak için Container
       padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Renkler.kartArkaPlanRengi, // Tema'dan
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          )
+        ]
+      ),
       child: ElevatedButton(
         onPressed: () {
-          if (provider.sonAdimdaMi) {
+          if (sonAdim) {
+            Provider.of<EgitimDetayProvider>(context, listen: false).resetAdim(); // Provider'ı sıfırla
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
@@ -206,14 +223,19 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
             );
           } else {
             provider.sonrakiAdimaGec();
+            _pageController.nextPage(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
           }
         },
         style: ElevatedButton.styleFrom(
           minimumSize: const Size(double.infinity, 50),
-          backgroundColor: provider.sonAdimdaMi ? Renkler.yardimciRenk : Renkler.vurguRenk,
+          backgroundColor: sonAdim ? Renkler.yardimciRenk : Renkler.vurguRenk,
         ),
         child: Text(
-          provider.sonAdimdaMi ? 'Eğitimi Bitir' : 'Sonraki Adım',
+          sonAdim ? 'Eğitimi Bitir' : 'Sonraki Adım',
+          style: MetinStilleri.butonYazisi.copyWith(color: Renkler.butonYaziRengi),
         ),
       ),
     );

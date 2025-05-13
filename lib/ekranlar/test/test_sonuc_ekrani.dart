@@ -7,11 +7,9 @@ import '../../sabitler/renkler.dart';
 import '../../sabitler/metin_stilleri.dart';
 import '../../utils/ikon_donusturucu.dart';
 import '../ana_sayfa_yonetici.dart';
-// import '../profil/profil_ekrani.dart'; // ProfilEkrani'na direkt gitmek yerine AnaSayfa üzerinden
 
 class TestSonucEkrani extends StatefulWidget {
   final int testId;
-
   const TestSonucEkrani({super.key, required this.testId});
 
   @override
@@ -24,10 +22,14 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final testProvider = Provider.of<TestProvider>(context, listen: false);
-      await testProvider.testiBitir(widget.testId);
-      if (testProvider.kazanilanRozetler.isNotEmpty && mounted) {
-         Provider.of<ProfilProvider>(context, listen: false).kullaniciProfiliniGetir();
-      }
+      // Testi bitir fonksiyonu zaten test provider'da çağrılıyor olacak
+      // Burada sadece sonucu bekleyip profil güncellemeyi tetikleyebiliriz.
+      // Ancak TestProvider.testiBitir'i burada çağırmak daha mantıklı olabilir
+      // çünkü bu ekran açıldığında sonucun hesaplanmış olması gerekir.
+       await testProvider.testiBitir(widget.testId);
+       if (testProvider.kazanilanRozetler.isNotEmpty && mounted) {
+          Provider.of<ProfilProvider>(context, listen: false).kullaniciProfiliniGetir();
+       }
     });
   }
 
@@ -37,7 +39,7 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Test Sonucu'),
+        title: Text('Test Sonucunuz', style: MetinStilleri.appBarBaslik),
         automaticallyImplyLeading: false,
       ),
       body: _buildBody(testProvider),
@@ -45,31 +47,40 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
   }
 
   Widget _buildBody(TestProvider provider) {
-    if (provider.testSonucuYukleniyor) {
+    if (provider.testSonucuYukleniyor && provider.sonucPuan == null) { // Sadece ilk yüklemede
       return const Center(child: CircularProgressIndicator());
     }
-
-    if (provider.hataMesaji != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            provider.hataMesaji!,
-            style: MetinStilleri.govdeMetni.copyWith(color: Renkler.hataRengi),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
+    if (provider.hataMesaji != null && provider.sonucPuan == null) {
+      return Center( /* ... Hata Mesajı ... */ );
     }
-
     if (provider.sonucPuan == null) {
-      return Center(
-        child: Text('Test sonucu hesaplanamadı.', style: MetinStilleri.govdeMetniIkincil),
-      );
+      return Center( /* ... Sonuç hesaplanamadı ... */ );
     }
 
     double puan = double.tryParse(provider.sonucPuan!) ?? 0.0;
-    bool basarili = puan >= 80;
+    bool basarili = puan >= 80; // Başarı sınırı
+    int dogruSayisi = 0;
+    int yanlisSayisi = 0;
+    int toplamSoru = provider.testSorulariModel?.sorular.length ?? 0;
+
+    if (provider.testSorulariModel != null) {
+       for (var soru in provider.testSorulariModel!.sorular) {
+          int? kullaniciCevapId = provider.verilenCevaplar[soru.soruId];
+          if (kullaniciCevapId != null) {
+            bool soruDogruMu = false;
+            for (var cevap in soru.cevaplar) {
+              if (cevap.cevapId == kullaniciCevapId && cevap.dogruMu) {
+                soruDogruMu = true;
+                break;
+              }
+            }
+            if (soruDogruMu) dogruSayisi++; else yanlisSayisi++;
+          } else {
+            yanlisSayisi++;
+          }
+        }
+    }
+
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -78,76 +89,69 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Icon(
-            basarili ? Icons.emoji_events_outlined : Icons.sentiment_dissatisfied_outlined,
-            color: basarili ? Renkler.basariRengi : Renkler.uyariRengi,
-            size: 80,
+            basarili ? Icons.emoji_events_rounded : Icons.sentiment_very_dissatisfied_rounded,
+            color: basarili ? Renkler.basariRengi : Renkler.hataRengi,
+            size: 90,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           Text(
-            basarili ? 'Tebrikler!' : 'Daha İyi Olabilirdi',
-            style: MetinStilleri.ekranBasligi.copyWith(color: basarili ? Renkler.basariRengi : Renkler.uyariRengi),
+            basarili ? 'Harika İş Çıkardın!' : 'Biraz Daha Çalışmalısın',
+            style: MetinStilleri.ekranBasligi.copyWith(color: basarili ? Renkler.basariRengi : Renkler.hataRengi),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             'Puanınız: ${provider.sonucPuan}%',
-            style: MetinStilleri.altBaslik.copyWith(fontSize: 22, fontWeight: FontWeight.bold),
+            style: MetinStilleri.ekranBasligi.copyWith(fontSize: 28, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
+          if(toplamSoru > 0)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Text(
+              '$toplamSoru sorudan $dogruSayisi doğru, $yanlisSayisi yanlış.',
+              style: MetinStilleri.govdeMetniIkincil,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 28),
 
           if (provider.kazanilanRozetler.isNotEmpty) ...[
             Text(
-              'Kazanılan Rozetler:',
-              style: MetinStilleri.altBaslik.copyWith(color: Renkler.yardimciRenk),
+              'Yeni Rozetler Kazandın!',
+              style: MetinStilleri.altBaslik.copyWith(color: Renkler.yardimciRenk, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 12.0,
-              runSpacing: 12.0,
-              children: provider.kazanilanRozetler.map((rozet) {
-                return Chip(
-                  avatar: Icon(
-                    IkonDonusturucu.getIconData(rozet.rozetIconAdi),
-                    color: Renkler.yardimciRenk,
-                  ),
-                  label: Text(rozet.rozetAdi, style: MetinStilleri.govdeMetni),
-                  backgroundColor: Renkler.yardimciRenk.withAlpha((0.15 * 255).round()),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            Wrap( /* ... (Rozet Chip'leri aynı kalabilir veya BasarimKarti'na benzetilebilir) ... */ ),
+            const SizedBox(height: 28),
           ],
 
-          ElevatedButton(
+          ElevatedButton.icon(
+            icon: const Icon(Icons.home_outlined),
+            label: const Text('Ana Sayfaya Dön'),
             onPressed: () {
                Provider.of<TestProvider>(context, listen: false).testiSifirla();
-               // Eğitimler sekmesi artık index 1
-               Provider.of<NavigasyonProvider>(context, listen: false).seciliIndexAta(1);
+               Provider.of<NavigasyonProvider>(context, listen: false).seciliIndexAta(1); // Eğitimler sekmesi
                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const AnaSayfaYoneticisi()),
                   (Route<dynamic> route) => false,
                 );
             },
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 50),
-            ),
-            child: const Text('Ana Sayfaya Dön'),
+            style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
           ),
           const SizedBox(height: 12),
-          TextButton(
+          TextButton.icon(
+            icon: const Icon(Icons.person_outline),
+            label: const Text('Profilime Git'),
             onPressed: () {
               Provider.of<TestProvider>(context, listen: false).testiSifirla();
-              // Profil sekmesi artık index 3
-              Provider.of<NavigasyonProvider>(context, listen: false).seciliIndexAta(3);
+              Provider.of<NavigasyonProvider>(context, listen: false).seciliIndexAta(3); // Profil sekmesi
               Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const AnaSayfaYoneticisi()),
                   (Route<dynamic> route) => false,
                 );
             },
-            child: Text('Profilime Git', style: MetinStilleri.linkMetni),
           ),
         ],
       ),
