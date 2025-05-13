@@ -18,24 +18,36 @@ class ProfilProvider with ChangeNotifier {
   String? get hataMesaji => _hataMesaji;
 
   Future<void> kullaniciProfiliniGetir() async {
+    print('[ProfilProvider] kullaniciProfiliniGetir çağrıldı.');
     final int? kullaniciId = _prefs.getInt('mevcutKullaniciId');
     if (kullaniciId == null) {
-      _hataMesaji = "Kullanıcı oturumu bulunamadı. Lütfen tekrar giriş yapın.";
-      _profilModel = null; // Önceki profili temizle
-      notifyListeners();
+      _hataMesaji = "Kullanıcı oturumu bulunamadı.";
+      _profilModel = null;
+      print('[ProfilProvider] Kullanıcı ID yok, profil çekilemedi.');
+      // notifyListeners(); // Gereksiz, UI zaten bu duruma göre ayarlanmalı
       return;
     }
-
     _isLoading = true;
     _hataMesaji = null;
-    _profilModel = null; // Yeni profil yüklenirken eskiyi temizle
+    // _profilModel = null; // Veri çekilirken eskiyi silme, UI'da sıçrama yapar
     notifyListeners();
     try {
       _profilModel = await _apiServisi.getKullaniciProfil(kullaniciId);
+      print('[ProfilProvider] Profil çekildi. Kullanıcı: ${_profilModel?.kullaniciBilgileri.kullaniciAdi}');
     } catch (e) {
       _hataMesaji = e.toString().replaceFirst("Exception: ", "");
+      _profilModel = null;
+      print('[ProfilProvider] Profil çekilirken hata: $_hataMesaji');
     }
     _isLoading = false;
+    notifyListeners();
+  }
+
+  void resetState() {
+    _profilModel = null;
+    _isLoading = false;
+    _hataMesaji = null;
+    print('[ProfilProvider] State resetlendi.');
     notifyListeners();
   }
 }

@@ -17,7 +17,7 @@ class EgitimDetayProvider with ChangeNotifier {
   EgitimAdimModel? get mevcutAdim {
     if (_egitimDetay != null &&
         _egitimDetay!.adimlar.isNotEmpty &&
-        _mevcutAdimIndex >= 0 && // Güvenlik kontrolü
+        _mevcutAdimIndex >= 0 &&
         _mevcutAdimIndex < _egitimDetay!.adimlar.length) {
       return _egitimDetay!.adimlar[_mevcutAdimIndex];
     }
@@ -35,14 +35,14 @@ class EgitimDetayProvider with ChangeNotifier {
     _hataMesaji = null;
     _egitimDetay = null;
     _mevcutAdimIndex = 0;
-    notifyListeners(); // Yükleme başladığını bildir
+    notifyListeners();
     try {
       _egitimDetay = await _apiServisi.getEgitimDetay(egitimId);
       print('[EgitimDetayProvider] API\'den yanıt alındı. Adım sayısı: ${_egitimDetay?.adimlar.length}');
       if (_egitimDetay != null && _egitimDetay!.adimlar.isNotEmpty) {
-        print('[EgitimDetayProvider] İlk adımın açıklaması (kısmi): ${_egitimDetay!.adimlar.first.adimAciklama?.substring(0, (_egitimDetay!.adimlar.first.adimAciklama?.length ?? 0) > 20 ? 20 : _egitimDetay!.adimlar.first.adimAciklama?.length)}...');
+        // print('[EgitimDetayProvider] İlk adımın açıklaması (kısmi): ${_egitimDetay!.adimlar.first.adimAciklama?.substring(0, (_egitimDetay!.adimlar.first.adimAciklama?.length ?? 0) > 20 ? 20 : _egitimDetay!.adimlar.first.adimAciklama?.length)}...');
       } else if (_egitimDetay != null && _egitimDetay!.adimlar.isEmpty) {
-        print('[EgitimDetayProvider] Eğitim için adım bulunamadı (API boş adım listesi döndü).');
+        print('[EgitimDetayProvider] Eğitim için adım bulunamadı.');
       }
     } catch (e) {
       _hataMesaji = e.toString().replaceFirst("Exception: ", "");
@@ -59,11 +59,11 @@ class EgitimDetayProvider with ChangeNotifier {
       print('[EgitimDetayProvider] Sonraki adıma geçildi. Yeni index: $_mevcutAdimIndex');
       notifyListeners();
     } else {
-      print('[EgitimDetayProvider] Sonraki adıma geçilemedi, zaten son adımda veya eğitim detayı yok.');
+      print('[EgitimDetayProvider] Sonraki adıma geçilemedi.');
     }
   }
 
-  void setMevcutAdimIndexFromPageView(int newIndex){ // PageView için yeni metod
+  void setMevcutAdimIndexFromPageView(int newIndex){
     if (_egitimDetay != null && newIndex >= 0 && newIndex < _egitimDetay!.adimlar.length) {
       if (_mevcutAdimIndex != newIndex) {
         _mevcutAdimIndex = newIndex;
@@ -73,11 +73,12 @@ class EgitimDetayProvider with ChangeNotifier {
     }
   }
 
-  void resetAdim() {
+  void resetState() {
+    _egitimDetay = null;
     _mevcutAdimIndex = 0;
-    _egitimDetay = null; // Detayı da sıfırla ki tekrar yüklenirken eski veri görünmesin
+    _isLoading = false;
     _hataMesaji = null;
-    print('[EgitimDetayProvider] Adım ve detay resetlendi.');
-    // notifyListeners(); // Bu genellikle ekran pop edilirken çağrılır, yeni ekran açılırken zaten yükleme olur.
+    print('[EgitimDetayProvider] State resetlendi.');
+    notifyListeners();
   }
 }
