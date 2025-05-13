@@ -214,7 +214,7 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
                         style: MetinStilleri.govdeMetni.copyWith(fontSize: 17, height: 1.65, color: Renkler.anaMetinRengi),
                         textAlign: TextAlign.left,
                       )
-                    : const Center(child: Text("Bu adım için açıklama bulunmamaktadır.", style: MetinStilleri.govdeMetniIkincil)),
+                    : Center(child: Text("Bu adım için açıklama bulunmamaktadır.", style: MetinStilleri.govdeMetniIkincil)),
               ),
             ),
           ),
