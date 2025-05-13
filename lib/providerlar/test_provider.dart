@@ -12,13 +12,11 @@ class TestProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _hataMesaji;
   int _mevcutSoruIndex = 0;
-  Map<int, int> _verilenCevaplar = {}; // <soruId, secilenCevapId>
+  Map<int, int> _verilenCevaplar = {};
 
-  // Test sonucu için
   String? _sonucPuan;
   List<RozetModel> _kazanilanRozetler = [];
   bool _testSonucuYukleniyor = false;
-
 
   TestProvider(this._prefs);
 
@@ -42,6 +40,16 @@ class TestProvider with ChangeNotifier {
   String? get sonucPuan => _sonucPuan;
   List<RozetModel> get kazanilanRozetler => _kazanilanRozetler;
   bool get testSonucuYukleniyor => _testSonucuYukleniyor;
+
+  // Yeni metot: PageView'dan gelen index ile mevcut soruyu güncellemek için
+  void setMevcutSoruIndex(int newIndex) {
+    if (_testSorulariModel != null && newIndex >= 0 && newIndex < _testSorulariModel!.sorular.length) {
+      if (_mevcutSoruIndex != newIndex) {
+        _mevcutSoruIndex = newIndex;
+        notifyListeners(); // UI'ın güncellenmesi için
+      }
+    }
+  }
 
   Future<void> testSorulariniGetir(int testId) async {
     _isLoading = true;
@@ -81,7 +89,7 @@ class TestProvider with ChangeNotifier {
     _hataMesaji = null;
     _sonucPuan = null;
     _kazanilanRozetler = [];
-    notifyListeners();
+    // notifyListeners(); // Bu metodun başında zaten yükleme durumu değişiyor
 
     int dogruSayisi = 0;
     int yanlisSayisi = 0;
@@ -102,7 +110,7 @@ class TestProvider with ChangeNotifier {
           yanlisSayisi++;
         }
       } else {
-        yanlisSayisi++; // Cevaplanmamış sorular yanlış sayılır
+        yanlisSayisi++;
       }
     }
 
@@ -139,6 +147,5 @@ class TestProvider with ChangeNotifier {
      _hataMesaji = null;
      _isLoading = false;
      _testSonucuYukleniyor = false;
-     // notifyListeners(); // Bu genellikle yeni bir test yüklenmeden önce çağrılır.
   }
 }

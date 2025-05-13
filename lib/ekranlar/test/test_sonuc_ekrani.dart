@@ -5,8 +5,10 @@ import '../../providerlar/profil_provider.dart';
 import '../../providerlar/navigasyon_provider.dart';
 import '../../sabitler/renkler.dart';
 import '../../sabitler/metin_stilleri.dart';
-import '../../utils/ikon_donusturucu.dart';
+// import '../../utils/ikon_donusturucu.dart'; // Kullanılmıyorsa kaldırılabilir (Rozet Chip'i için kullanılıyordu)
 import '../ana_sayfa_yonetici.dart';
+import '../../modeller/rozet_model.dart'; // RozetModel için eklendi (Chip'te kullanılıyor)
+import '../../utils/ikon_donusturucu.dart'; // Chip içindeki ikon için
 
 class TestSonucEkrani extends StatefulWidget {
   final int testId;
@@ -22,10 +24,6 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final testProvider = Provider.of<TestProvider>(context, listen: false);
-      // Testi bitir fonksiyonu zaten test provider'da çağrılıyor olacak
-      // Burada sadece sonucu bekleyip profil güncellemeyi tetikleyebiliriz.
-      // Ancak TestProvider.testiBitir'i burada çağırmak daha mantıklı olabilir
-      // çünkü bu ekran açıldığında sonucun hesaplanmış olması gerekir.
        await testProvider.testiBitir(widget.testId);
        if (testProvider.kazanilanRozetler.isNotEmpty && mounted) {
           Provider.of<ProfilProvider>(context, listen: false).kullaniciProfiliniGetir();
@@ -39,7 +37,7 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Test Sonucunuz', style: MetinStilleri.appBarBaslik),
+        title: const Text('Test Sonucunuz'), // const eklendi
         automaticallyImplyLeading: false,
       ),
       body: _buildBody(testProvider),
@@ -47,18 +45,29 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
   }
 
   Widget _buildBody(TestProvider provider) {
-    if (provider.testSonucuYukleniyor && provider.sonucPuan == null) { // Sadece ilk yüklemede
+    if (provider.testSonucuYukleniyor && provider.sonucPuan == null) {
       return const Center(child: CircularProgressIndicator());
     }
     if (provider.hataMesaji != null && provider.sonucPuan == null) {
-      return Center( /* ... Hata Mesajı ... */ );
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            provider.hataMesaji!,
+            style: MetinStilleri.govdeMetni.copyWith(color: Renkler.hataRengi),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
     }
     if (provider.sonucPuan == null) {
-      return Center( /* ... Sonuç hesaplanamadı ... */ );
+      return Center(
+        child: Text('Test sonucu hesaplanamadı.', style: MetinStilleri.govdeMetniIkincil),
+      );
     }
 
     double puan = double.tryParse(provider.sonucPuan!) ?? 0.0;
-    bool basarili = puan >= 80; // Başarı sınırı
+    bool basarili = puan >= 80;
     int dogruSayisi = 0;
     int yanlisSayisi = 0;
     int toplamSoru = provider.testSorulariModel?.sorular.length ?? 0;
@@ -74,13 +83,12 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
                 break;
               }
             }
-            if (soruDogruMu) dogruSayisi++; else yanlisSayisi++;
+            if (soruDogruMu) {dogruSayisi++;} else {yanlisSayisi++;} // Düzeltildi: curly braces
           } else {
             yanlisSayisi++;
           }
         }
     }
-
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -123,7 +131,21 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            Wrap( /* ... (Rozet Chip'leri aynı kalabilir veya BasarimKarti'na benzetilebilir) ... */ ),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12.0,
+              runSpacing: 12.0,
+              children: provider.kazanilanRozetler.map((rozet) {
+                return Chip(
+                  avatar: Icon(
+                    IkonDonusturucu.getIconData(rozet.rozetIconAdi),
+                    color: Renkler.yardimciRenk,
+                  ),
+                  label: Text(rozet.rozetAdi, style: MetinStilleri.govdeMetni),
+                  backgroundColor: Renkler.yardimciRenk.withAlpha((0.15 * 255).round()),
+                );
+              }).toList(),
+            ),
             const SizedBox(height: 28),
           ],
 
@@ -132,7 +154,7 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
             label: const Text('Ana Sayfaya Dön'),
             onPressed: () {
                Provider.of<TestProvider>(context, listen: false).testiSifirla();
-               Provider.of<NavigasyonProvider>(context, listen: false).seciliIndexAta(1); // Eğitimler sekmesi
+               Provider.of<NavigasyonProvider>(context, listen: false).seciliIndexAta(1);
                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const AnaSayfaYoneticisi()),
                   (Route<dynamic> route) => false,
@@ -146,7 +168,7 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
             label: const Text('Profilime Git'),
             onPressed: () {
               Provider.of<TestProvider>(context, listen: false).testiSifirla();
-              Provider.of<NavigasyonProvider>(context, listen: false).seciliIndexAta(3); // Profil sekmesi
+              Provider.of<NavigasyonProvider>(context, listen: false).seciliIndexAta(3);
               Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const AnaSayfaYoneticisi()),
                   (Route<dynamic> route) => false,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providerlar/navigasyon_provider.dart';
-import '../sabitler/renkler.dart';
-import '../sabitler/metin_stilleri.dart'; // Eklendi
+// import '../sabitler/renkler.dart'; // Kullanılmıyor
+// import '../sabitler/metin_stilleri.dart'; // Kullanılmıyor
 import 'ar/ar_ekrani.dart';
 import 'egitim/egitim_listesi_ekrani.dart';
 import 'test/test_listesi_ekrani.dart';
@@ -19,22 +19,21 @@ class AnaSayfaYoneticisi extends StatelessWidget {
     ProfilEkrani(),
   ];
 
-  // ar_medic'teki BottomNavBar ikonları ve labelları
   final List<BottomNavigationBarItem> _navBarItems = const [
      BottomNavigationBarItem(
       icon: Icon(Icons.camera_alt_outlined),
-      activeIcon: Icon(Icons.camera_alt), // Tema'dan seçili renk alacak
+      activeIcon: Icon(Icons.camera_alt),
       label: 'AR',
     ),
     BottomNavigationBarItem(
-      icon: Icon(Icons.library_books_outlined),
-      activeIcon: Icon(Icons.library_books),
-      label: 'Kütüphane', // "Eğitimler" yerine "Kütüphane"
+      icon: Icon(Icons.school_outlined),
+      activeIcon: Icon(Icons.school),
+      label: 'Kütüphane',
     ),
     BottomNavigationBarItem(
       icon: Icon(Icons.quiz_outlined),
       activeIcon: Icon(Icons.quiz),
-      label: 'Test', // "Testler" yerine "Test"
+      label: 'Test',
     ),
     BottomNavigationBarItem(
       icon: Icon(Icons.person_outline),
@@ -48,21 +47,15 @@ class AnaSayfaYoneticisi extends StatelessWidget {
     final navigasyonProvider = Provider.of<NavigasyonProvider>(context);
 
     return Scaffold(
-      body: IndexedStack( // Ekran state'lerini korumak için iyi
+      body: IndexedStack(
         index: navigasyonProvider.seciliIndex,
         children: _ekranSecenekleri,
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: _navBarItems,
         currentIndex: navigasyonProvider.seciliIndex,
-        // Diğer stil özellikleri tema dosyasından (bottomNavigationBarTheme) gelecek
-        // selectedItemColor: Renkler.anaRenk, // Tema'dan
-        // unselectedItemColor: Colors.grey[600], // Tema'dan
-        // showUnselectedLabels: true, // Tema'dan
-        // type: BottomNavigationBarType.fixed, // Tema'dan
-        // backgroundColor: Colors.white, // Tema'dan
-        // elevation: 8.0, // Tema'dan
         onTap: (index) => navigasyonProvider.seciliIndexAta(index),
+        // Diğer stil özellikleri tema dosyasından (bottomNavigationBarTheme) gelecek
       ),
     );
   }

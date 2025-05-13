@@ -34,20 +34,19 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
   }
 
   Future<bool> _onWillPop() async {
-    // Geri tuşuna basıldığında veya AppBar'daki kapat butonuna tıklandığında bu dialog gösterilir.
     final shouldPop = await showDialog<bool>(
-      context: context, // Eksik parametre eklendi
-      builder: (BuildContext context) { // Eksik parametre eklendi
+      context: context,
+      builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Testten Çıkmak İstiyor Musunuz?'),
           content: const Text('Cevaplarınız kaydedilmeyecek ve testten çıkılacaktır.'),
           actions: <Widget>[
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false), // Dialog'u kapat, pop etme
+              onPressed: () => Navigator.of(context).pop(false),
               child: const Text('İptal'),
             ),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(true), // Dialog'u kapat, pop et
+              onPressed: () => Navigator.of(context).pop(true),
               child: Text('Çık', style: TextStyle(color: Renkler.hataRengi)),
             ),
           ],
@@ -56,9 +55,9 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
     );
     if (shouldPop ?? false) {
       Provider.of<TestProvider>(context, listen: false).testiSifirla();
-      return true; // Sayfadan çıkmaya izin ver
+      return true;
     }
-    return false; // Sayfadan çıkmayı engelle
+    return false;
   }
 
   @override
@@ -66,13 +65,11 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
     final testProvider = Provider.of<TestProvider>(context);
 
     return PopScope(
-      canPop: false, // Manuel olarak _onWillPop ile yöneteceğiz
+      canPop: false,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
-        if (didPop) return; // Zaten pop edildiyse bir şey yapma
+        if (didPop) return;
         final bool shouldPop = await _onWillPop();
-        if(shouldPop && mounted){
-          Navigator.of(context).pop();
-        }
+        if(shouldPop && mounted){ Navigator.of(context).pop(); }
       },
       child: Scaffold(
         appBar: AppBar(
@@ -81,14 +78,14 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
             icon: Icon(Icons.close, color: Renkler.ikonRengi),
             onPressed: () async {
                final bool shouldPop = await _onWillPop();
-               if(shouldPop && mounted) {
-                  Navigator.of(context).pop();
-               }
+               if(shouldPop && mounted) { Navigator.of(context).pop(); }
             }
           ),
         ),
         body: _buildBody(testProvider, context),
-        bottomNavigationBar: testProvider.testSorulariModel != null && !testProvider.isLoading && provider.testSorulariModel!.sorular.isNotEmpty
+        bottomNavigationBar: testProvider.testSorulariModel != null &&
+                             !testProvider.isLoading &&
+                             testProvider.testSorulariModel!.sorular.isNotEmpty // Düzeltildi: provider -> testProvider
             ? _buildBottomButton(testProvider, context)
             : null,
       ),
@@ -146,16 +143,7 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
             controller: _pageController,
             itemCount: provider.testSorulariModel!.sorular.length,
             onPageChanged: (index) {
-               // Provider'daki mevcutSoruIndex'i güncellemek için bir metod çağırılabilir
-               // Veya butonlar doğrudan _pageController.jumpToPage kullanabilir.
-               // Şimdilik, butonlar TestProvider'daki index'i güncelliyor,
-               // ve PageView bu index'e göre kendini ayarlayabilir veya
-               // butonlar _pageController'ı yönlendirebilir.
-               // En basiti butonların provider'ı, provider'ın da PageView'ı (index değişimi ile) etkilemesi.
-               // Bu haliyle, buton provider'ı güncelliyor, PageView'ın da bu değişikliğe tepki vermesi için
-               // _pageController.jumpToPage(provider.mevcutSoruIndex) gibi bir şey gerekebilir.
-               // Ya da onPageChanged içinde provider.setMevcutSoruIndex(index) çağrılır.
-               provider.mevcutSoruIndex = index; // Doğrudan atama veya metod ile
+               provider.setMevcutSoruIndex(index); // Düzeltildi: provider metodu kullanıldı
             },
             itemBuilder: (context, index) {
               final SoruModel soru = provider.testSorulariModel!.sorular[index];
@@ -218,7 +206,6 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
   }
 
   Widget _buildBottomButton(TestProvider provider, BuildContext context) {
-    // Soru listesi boşsa veya yüklenmemişse buton gösterme
     if (provider.testSorulariModel == null || provider.testSorulariModel!.sorular.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -232,7 +219,7 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
         color: Renkler.kartArkaPlanRengi,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withAlpha(20), // withOpacity yerine withAlpha
             blurRadius: 8,
             offset: const Offset(0, -2),
           )
@@ -241,14 +228,11 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
       child: ElevatedButton(
         onPressed: cevapVerildiMi ? () {
           if (sonSoruda) {
-            // TestiBitir provider içinde çağrılacağı için burada testiSifirla demeye gerek yok,
-            // TestSonucEkrani açıldığında TestProvider.testiBitir çalışacak.
             Navigator.pushReplacement(
               context, MaterialPageRoute(builder: (_) => TestSonucEkrani(testId: widget.testId)),
             );
           } else {
-            provider.sonrakiSoruyaGec(); // Bu, provider'daki mevcutSoruIndex'i günceller
-            // PageController'ı provider'daki index'e göre güncelle
+            provider.sonrakiSoruyaGec();
             if (_pageController.hasClients && _pageController.page?.round() != provider.mevcutSoruIndex) {
               _pageController.animateToPage(
                 provider.mevcutSoruIndex,
