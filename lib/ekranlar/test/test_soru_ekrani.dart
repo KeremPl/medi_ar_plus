@@ -34,12 +34,31 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
   }
 
   Future<bool> _onWillPop() async {
-    final shouldPop = await showDialog<bool>( /* ... (Dialog kodu aynı) ... */ );
+    // Geri tuşuna basıldığında veya AppBar'daki kapat butonuna tıklandığında bu dialog gösterilir.
+    final shouldPop = await showDialog<bool>(
+      context: context, // Eksik parametre eklendi
+      builder: (BuildContext context) { // Eksik parametre eklendi
+        return AlertDialog(
+          title: const Text('Testten Çıkmak İstiyor Musunuz?'),
+          content: const Text('Cevaplarınız kaydedilmeyecek ve testten çıkılacaktır.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false), // Dialog'u kapat, pop etme
+              child: const Text('İptal'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true), // Dialog'u kapat, pop et
+              child: Text('Çık', style: TextStyle(color: Renkler.hataRengi)),
+            ),
+          ],
+        );
+      },
+    );
     if (shouldPop ?? false) {
       Provider.of<TestProvider>(context, listen: false).testiSifirla();
-      return true;
+      return true; // Sayfadan çıkmaya izin ver
     }
-    return false;
+    return false; // Sayfadan çıkmayı engelle
   }
 
   @override
@@ -47,11 +66,13 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
     final testProvider = Provider.of<TestProvider>(context);
 
     return PopScope(
-      canPop: false,
+      canPop: false, // Manuel olarak _onWillPop ile yöneteceğiz
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
-        if (didPop) return;
+        if (didPop) return; // Zaten pop edildiyse bir şey yapma
         final bool shouldPop = await _onWillPop();
-        if(shouldPop && mounted){ Navigator.pop(context); }
+        if(shouldPop && mounted){
+          Navigator.of(context).pop();
+        }
       },
       child: Scaffold(
         appBar: AppBar(
@@ -60,12 +81,14 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
             icon: Icon(Icons.close, color: Renkler.ikonRengi),
             onPressed: () async {
                final bool shouldPop = await _onWillPop();
-               if(shouldPop && mounted) { Navigator.pop(context); }
+               if(shouldPop && mounted) {
+                  Navigator.of(context).pop();
+               }
             }
           ),
         ),
         body: _buildBody(testProvider, context),
-        bottomNavigationBar: testProvider.testSorulariModel != null && !testProvider.isLoading
+        bottomNavigationBar: testProvider.testSorulariModel != null && !testProvider.isLoading && provider.testSorulariModel!.sorular.isNotEmpty
             ? _buildBottomButton(testProvider, context)
             : null,
       ),
@@ -73,17 +96,37 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
   }
 
   Widget _buildBody(TestProvider provider, BuildContext context) {
-    if (provider.isLoading && provider.testSorulariModel == null) { // Sadece ilk yüklemede
+    if (provider.isLoading && provider.testSorulariModel == null) {
       return const Center(child: CircularProgressIndicator());
     }
     if (provider.hataMesaji != null && provider.testSorulariModel == null) {
-      return Center( /* ... Hata mesajı ... */ );
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                provider.hataMesaji!,
+                style: MetinStilleri.govdeMetni.copyWith(color: Renkler.hataRengi),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => provider.testSorulariniGetir(widget.testId),
+                child: const Text('Tekrar Dene'),
+              )
+            ],
+          ),
+        ),
+      );
     }
     if (provider.testSorulariModel == null || provider.testSorulariModel!.sorular.isEmpty) {
-      return Center( /* ... Soru bulunamadı ... */ );
+      return Center(
+        child: Text('Bu test için soru bulunamadı.', style: MetinStilleri.govdeMetniIkincil),
+      );
     }
 
-    // PageView ile sorular arası kaydırmalı geçiş
     return Column(
       children: [
         Padding(
@@ -93,7 +136,7 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
             style: MetinStilleri.kucukMetin.copyWith(color: Renkler.anaRenk, fontWeight: FontWeight.bold),
           ),
         ),
-        LinearProgressIndicator( // Soru ilerleme barı
+        LinearProgressIndicator(
           value: (provider.mevcutSoruIndex + 1) / provider.testSorulariModel!.sorular.length,
           backgroundColor: Renkler.arkaPlanRengi,
           valueColor: AlwaysStoppedAnimation<Color>(Renkler.anaRenk),
@@ -103,7 +146,16 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
             controller: _pageController,
             itemCount: provider.testSorulariModel!.sorular.length,
             onPageChanged: (index) {
-               // Provider'ı güncellemek yerine butondan yönetelim
+               // Provider'daki mevcutSoruIndex'i güncellemek için bir metod çağırılabilir
+               // Veya butonlar doğrudan _pageController.jumpToPage kullanabilir.
+               // Şimdilik, butonlar TestProvider'daki index'i güncelliyor,
+               // ve PageView bu index'e göre kendini ayarlayabilir veya
+               // butonlar _pageController'ı yönlendirebilir.
+               // En basiti butonların provider'ı, provider'ın da PageView'ı (index değişimi ile) etkilemesi.
+               // Bu haliyle, buton provider'ı güncelliyor, PageView'ın da bu değişikliğe tepki vermesi için
+               // _pageController.jumpToPage(provider.mevcutSoruIndex) gibi bir şey gerekebilir.
+               // Ya da onPageChanged içinde provider.setMevcutSoruIndex(index) çağrılır.
+               provider.mevcutSoruIndex = index; // Doğrudan atama veya metod ile
             },
             itemBuilder: (context, index) {
               final SoruModel soru = provider.testSorulariModel!.sorular[index];
@@ -154,36 +206,56 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
                     }
                   },
                   activeColor: Renkler.vurguRenk,
-                  controlAffinity: ListTileControlAffinity.trailing, // Radio butonu sağda
+                  controlAffinity: ListTileControlAffinity.trailing,
                 ),
               );
             },
           ),
-          const SizedBox(height: 60), // Buton için altta boşluk
+          const SizedBox(height: 60),
         ],
       ),
     );
   }
 
   Widget _buildBottomButton(TestProvider provider, BuildContext context) {
+    // Soru listesi boşsa veya yüklenmemişse buton gösterme
+    if (provider.testSorulariModel == null || provider.testSorulariModel!.sorular.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     bool cevapVerildiMi = provider.verilenCevaplar.containsKey(provider.mevcutSoru?.soruId);
     bool sonSoruda = provider.mevcutSoruIndex == (provider.testSorulariModel!.sorular.length - 1);
 
     return Container(
       padding: const EdgeInsets.all(16.0),
-       decoration: BoxDecoration( /* ... (Eğitim detaydaki gibi gölgeli kutu) ... */ ),
+      decoration: BoxDecoration(
+        color: Renkler.kartArkaPlanRengi,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          )
+        ]
+      ),
       child: ElevatedButton(
         onPressed: cevapVerildiMi ? () {
           if (sonSoruda) {
-            Provider.of<TestProvider>(context, listen: false).testiSifirla(); // Eski cevapları temizle
+            // TestiBitir provider içinde çağrılacağı için burada testiSifirla demeye gerek yok,
+            // TestSonucEkrani açıldığında TestProvider.testiBitir çalışacak.
             Navigator.pushReplacement(
               context, MaterialPageRoute(builder: (_) => TestSonucEkrani(testId: widget.testId)),
             );
           } else {
-            provider.sonrakiSoruyaGec();
-            _pageController.nextPage(
-              duration: const Duration(milliseconds: 300), curve: Curves.easeInOut,
-            );
+            provider.sonrakiSoruyaGec(); // Bu, provider'daki mevcutSoruIndex'i günceller
+            // PageController'ı provider'daki index'e göre güncelle
+            if (_pageController.hasClients && _pageController.page?.round() != provider.mevcutSoruIndex) {
+              _pageController.animateToPage(
+                provider.mevcutSoruIndex,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
           }
         } : null,
         style: ElevatedButton.styleFrom(
