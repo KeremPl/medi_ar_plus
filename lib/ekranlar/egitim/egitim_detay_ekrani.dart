@@ -47,7 +47,7 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
   @override
   Widget build(BuildContext context) {
     final egitimDetayProvider = Provider.of<EgitimDetayProvider>(context);
-    print('[EgitimDetayEkrani] build çağrıldı. isLoading: ${egitimDetayProvider.isLoading}, Adım Sayısı: ${egitimDetayProvider.egitimDetay?.adimlar.length ?? "Detay Yok"}');
+    print('[EgitimDetayEkrani] build çağrıldı. isLoading: ${egitimDetayProvider.isLoading}, Adım Sayısı: ${egitimDetayProvider.egitimDetay?.adimlar.length ?? "Detay Yok"}, Mevcut Adım Index: ${egitimDetayProvider.mevcutAdimIndex}');
 
     return Scaffold(
       appBar: AppBar(
@@ -70,24 +70,39 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
   }
 
   Widget _buildBody(EgitimDetayProvider provider, BuildContext context) {
-    if (provider.isLoading && provider.egitimDetay == null) { // Sadece ilk yüklemede ve detay yokken
+    if (provider.isLoading && provider.egitimDetay == null) {
       print('[EgitimDetayEkrani] _buildBody: Yükleniyor...');
       return const Center(child: CircularProgressIndicator());
     }
 
     if (provider.hataMesaji != null && provider.egitimDetay == null) {
       print('[EgitimDetayEkrani] _buildBody: Hata Mesajı: ${provider.hataMesaji}');
-      return Center( /* ... Hata mesajı ... */ );
+      return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(provider.hataMesaji!, textAlign: TextAlign.center, style: MetinStilleri.govdeMetni.copyWith(color: Renkler.hataRengi)),
+          )
+      );
     }
 
     if (provider.egitimDetay == null || provider.egitimDetay!.adimlar.isEmpty) {
       print('[EgitimDetayEkrani] _buildBody: Eğitim adımları bulunamadı veya detay null.');
       return Center(
-        child: Text('Eğitim adımları yükleniyor veya bulunamadı...', style: MetinStilleri.govdeMetniIkincil),
+        child: Text('Eğitim adımları yükleniyor veya bulunamadı.', style: MetinStilleri.govdeMetniIkincil),
       );
     }
 
-    print('[EgitimDetayEkrani] _buildBody: PageView oluşturuluyor. Adım sayısı: ${provider.egitimDetay!.adimlar.length}');
+    print('[EgitimDetayEkrani] _buildBody: PageView oluşturuluyor. Adım sayısı: ${provider.egitimDetay!.adimlar.length}. Mevcut Index: ${provider.mevcutAdimIndex}');
+    // Eğer _pageController'ın mevcut sayfası provider'daki index ile uyuşmuyorsa, atla.
+    // Bu, provider güncellendiğinde PageView'ın doğru sayfayı göstermesini sağlar.
+    if (_pageController.hasClients && _pageController.page?.round() != provider.mevcutAdimIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) { // Build tamamlandıktan sonra çalıştır
+          if(_pageController.hasClients) { // Tekrar kontrol et, dispose olmuş olabilir
+               _pageController.jumpToPage(provider.mevcutAdimIndex);
+          }
+      });
+    }
+
     return Column(
       children: [
         if (provider.egitimDetay!.adimlar.length > 1)
@@ -96,7 +111,7 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Flexible( // Uzun eğitim adları için
+                Flexible(
                   child: Text(
                     widget.egitimAdi,
                     style: MetinStilleri.altBaslik.copyWith(fontWeight: FontWeight.w600),
@@ -115,6 +130,7 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
             controller: _pageController,
             itemCount: provider.egitimDetay!.adimlar.length,
             onPageChanged: (index) {
+              print('[EgitimDetayEkrani] PageView onPageChanged: index $index');
               provider.setMevcutAdimIndexFromPageView(index);
             },
             itemBuilder: (context, index) {
@@ -129,8 +145,6 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
   }
 
   Widget _buildAdimSayfasi(EgitimAdimModel adim, BuildContext context) {
-    // ... (Bu metodun içeriği önceki YAML'daki gibi kalabilir, loglar eklenmişti)
-    // Sadece emin olmak için:
     String tamFotografPath = ApiSabitleri.kokUrl.replaceAll('/api/', '');
     if (adim.adimFotograf != null && adim.adimFotograf!.isNotEmpty) {
       String gelenYol = adim.adimFotograf!;
@@ -138,47 +152,95 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
         String duzeltilmisYol = gelenYol.replaceFirst('/images/', '/images/egitim_adimlari/');
         tamFotografPath += duzeltilmisYol;
       } else if (gelenYol.startsWith('/')) {
-          tamFotografPath += gelenYol;
+        tamFotografPath += gelenYol;
       } else {
-          tamFotografPath += '/images/egitim_adimlari/$gelenYol';
+        tamFotografPath += '/images/egitim_adimlari/$gelenYol';
       }
     } else {
       tamFotografPath = '';
     }
+    print('[EgitimDetayEkrani] _buildAdimSayfasi - Adım: ${adim.adimSira}, Oluşturulan Foto URL: $tamFotografPath');
 
-    return SingleChildScrollView( /* ... (içerik aynı) ... */ );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (tamFotografPath.isNotEmpty)
+            Expanded(
+              flex: 5,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16.0),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12.0),
+                  child: tamFotografPath.toLowerCase().endsWith('.svg')
+                      ? SvgPicture.network(
+                          tamFotografPath,
+                          fit: BoxFit.contain,
+                          placeholderBuilder: (_) => const Center(child: CircularProgressIndicator(strokeWidth: 2.0)),
+                        )
+                      : Image.network(
+                          tamFotografPath,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(child: CircularProgressIndicator(strokeWidth: 2.0));
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            print('[EgitimDetayEkrani] Adım ${adim.adimSira} Image.network Yükleme Hatası: $error URL: $tamFotografPath');
+                            return Center(child: Icon(Icons.broken_image_outlined, size: 60, color: Colors.grey[350]));
+                          },
+                        ),
+                ),
+              ),
+            )
+          else if (adim.adimFotograf != null && adim.adimFotograf!.isNotEmpty)
+            Expanded(flex: 5, child: Center(child: Text("Resim yüklenemedi (hatalı yol).", style: MetinStilleri.kucukMetin.copyWith(color: Renkler.hataRengi))))
+          else
+            const SizedBox.shrink(),
+
+          Expanded(
+            flex: 4,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: (adim.adimAciklama != null && adim.adimAciklama!.isNotEmpty)
+                    ? Text(
+                        adim.adimAciklama!,
+                        style: MetinStilleri.govdeMetni.copyWith(fontSize: 17, height: 1.65, color: Renkler.anaMetinRengi),
+                        textAlign: TextAlign.left,
+                      )
+                    : const Center(child: Text("Bu adım için açıklama bulunmamaktadır.", style: MetinStilleri.govdeMetniIkincil)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildBottomButton(EgitimDetayProvider provider, BuildContext context) {
-    // Bu metodun içeriği de önceki YAML'daki gibi, sadece provider.sonAdimdaMi getter'ını kullanacak
-    // bool sonAdim = provider.sonAdimdaMi; // getter ile
-    // ... (içerik aynı)
-    // Sadece PageView senkronizasyonu için sonrakiAdimaGec() çağrısından sonra:
-    // if (!provider.sonAdimdaMi && _pageController.hasClients) { // Artık provider.sonAdimdaMi getter
-    //    _pageController.animateToPage(
-    //       provider.mevcutAdimIndex, // Provider zaten güncellendi
-    //       duration: const Duration(milliseconds: 300),
-    //       curve: Curves.easeInOut,
-    //    );
-    // }
-    // --- Yukarıdaki PageController güncellemesi EgitimDetayProvider'daki sonrakiAdimaGec içinden
-    // --- veya buradaki PageView onPageChanged ile zaten hallediliyor.
-    // --- Tekrar kontrol: Buton provider'daki index'i, PageView provider'daki index'i güncelliyor.
-    // --- Butona basıldığında provider'daki index değişir, UI yeniden çizilir, PageView yeni index'e atlar.
-    // --- PageView kaydırıldığında provider'daki index değişir, UI yeniden çizilir, buton metni güncellenir.
-    // --- Bu yüzden _pageController.animateToPage burada gerekli değil.
-    // --- Sadece EgitimDetayProvider'daki sonrakiAdimaGec metodunda _mevcutAdimIndex güncellenmeli
-    // --- ve PageView onPageChanged'de provider'daki setMevcutAdimIndexFromPageView çağrılmalı.
-
-    // Önceki kod doğruydu, sadece sonAdimdaMi getter'ını kullanacak şekilde teyit:
     bool sonAdim = provider.sonAdimdaMi;
 
     return Container(
       padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration( /* ... */ ),
+      decoration: BoxDecoration(
+        color: Renkler.kartArkaPlanRengi,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(20),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          )
+        ]
+      ),
       child: ElevatedButton(
         onPressed: () {
-          if (sonAdim) { // provider.sonAdimdaMi getter'ı kullanılacak
+          if (sonAdim) {
             Provider.of<EgitimDetayProvider>(context, listen: false).resetAdim();
             Navigator.pushReplacement(
               context,
@@ -190,17 +252,12 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
               ),
             );
           } else {
-            provider.sonrakiAdimaGec(); // Bu _mevcutAdimIndex'i artırır
-            // PageView'in bu değişikliğe tepki vermesi için _pageController'ı da hareket ettirmemiz gerekebilir.
-            // Eğer PageView onPageChanged provider'ı güncelliyorsa, ve buton provider'ı güncelliyorsa,
-            // _pageController'ı burada manuel hareket ettirmek çift güncellemeye yol açabilir.
-            // En iyisi: Buton provider'ı güncellesin. PageView onPageChanged de provider'ı güncellesin.
-            // _pageController.animateToPage provider.mevcutAdimIndex'e gitmeli.
-             if (_pageController.hasClients) {
+            provider.sonrakiAdimaGec();
+            if (_pageController.hasClients) {
                _pageController.animateToPage(
-                 provider.mevcutAdimIndex, // provider.sonrakiAdimaGec() ile güncellenen index
-                 duration: const Duration(milliseconds: 400),
-                 curve: Curves.easeOutQuad,
+                 provider.mevcutAdimIndex,
+                 duration: const Duration(milliseconds: 350),
+                 curve: Curves.easeOutCubic,
                );
              }
           }
