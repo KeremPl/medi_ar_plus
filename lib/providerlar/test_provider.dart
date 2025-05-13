@@ -6,7 +6,7 @@ import '../modeller/rozet_model.dart';
 
 class TestProvider with ChangeNotifier {
   final ApiServisi _apiServisi = ApiServisi();
-  final SharedPreferences _prefs;
+  final SharedPreferences _prefs; // Kullanılıyor (testiBitir içinde)
 
   TestSorularModel? _testSorulariModel;
   bool _isLoading = false;
@@ -24,19 +24,41 @@ class TestProvider with ChangeNotifier {
   String? get hataMesaji => _hataMesaji;
   int get mevcutSoruIndex => _mevcutSoruIndex;
   Map<int, int> get verilenCevaplar => _verilenCevaplar;
-  SoruModel? get mevcutSoru { /* ... getter içeriği aynı ... */ }
-  bool get sonSorudaMi { /* ... getter içeriği aynı ... */ }
+
+  SoruModel? get mevcutSoru { // Düzeltildi: Her zaman bir değer döndürür (null olabilir)
+    if (_testSorulariModel != null &&
+        _testSorulariModel!.sorular.isNotEmpty &&
+        _mevcutSoruIndex >= 0 && // Güvenlik kontrolü
+        _mevcutSoruIndex < _testSorulariModel!.sorular.length) {
+      return _testSorulariModel!.sorular[_mevcutSoruIndex];
+    }
+    return null; // Null döndür
+  }
+
+  bool get sonSorudaMi { // Düzeltildi: Her zaman bir bool değer döndürür
+    if (_testSorulariModel == null || _testSorulariModel!.sorular.isEmpty) {
+      return false; // Soru yoksa son soruda olamaz
+    }
+    return _mevcutSoruIndex == _testSorulariModel!.sorular.length - 1;
+  }
+
   String? get sonucPuan => _sonucPuan;
   List<RozetModel> get kazanilanRozetler => _kazanilanRozetler;
   bool get testSonucuYukleniyor => _testSonucuYukleniyor;
-  void setMevcutSoruIndex(int newIndex) { /* ... metod içeriği aynı ... */ }
+
+  void setMevcutSoruIndex(int newIndex) {
+    if (_testSorulariModel != null && newIndex >= 0 && newIndex < _testSorulariModel!.sorular.length) {
+      if (_mevcutSoruIndex != newIndex) {
+        _mevcutSoruIndex = newIndex;
+        notifyListeners();
+      }
+    }
+  }
 
   Future<void> testSorulariniGetir(int testId) async {
-    print('[TestProvider] testSorulariniGetir çağrıldı. ID: $testId');
+    // print('[TestProvider] testSorulariniGetir çağrıldı. ID: $testId'); // Geliştirme logu
     _isLoading = true;
     _hataMesaji = null;
-    // resetState() zaten bu değerleri sıfırlıyor, burada tekrar etmeye gerek yok eğer resetState çağrılacaksa.
-    // Ama testSorulariniGetir direkt çağrılırsa sıfırlama önemli.
     _testSorulariModel = null;
     _mevcutSoruIndex = 0;
     _verilenCevaplar = {};
@@ -52,9 +74,60 @@ class TestProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void cevapVer(int soruId, int cevapId) { /* ... (içerik aynı) ... */ }
-  void sonrakiSoruyaGec() { /* ... (içerik aynı) ... */ }
-  Future<void> testiBitir(int testId) async { /* ... (içerik aynı) ... */ }
+  void cevapVer(int soruId, int cevapId) {
+    _verilenCevaplar[soruId] = cevapId;
+    notifyListeners();
+  }
+
+  void sonrakiSoruyaGec() {
+    if (_testSorulariModel != null &&
+        _mevcutSoruIndex < _testSorulariModel!.sorular.length - 1) {
+      _mevcutSoruIndex++;
+      notifyListeners();
+    }
+  }
+
+  Future<void> testiBitir(int testId) async {
+    if (_testSorulariModel == null) return;
+    _testSonucuYukleniyor = true;
+    _hataMesaji = null;
+    _sonucPuan = null;
+    _kazanilanRozetler = [];
+
+    int dogruSayisi = 0;
+    int yanlisSayisi = 0;
+    for (var soru in _testSorulariModel!.sorular) {
+      int? kullaniciCevapId = _verilenCevaplar[soru.soruId];
+      if (kullaniciCevapId != null) {
+        bool dogruMu = soru.cevaplar.any((c) => c.cevapId == kullaniciCevapId && c.dogruMu);
+        if (dogruMu) {dogruSayisi++;} else {yanlisSayisi++;}
+      } else {
+        yanlisSayisi++;
+      }
+    }
+
+    final int? kullaniciId = _prefs.getInt('mevcutKullaniciId');
+    if (kullaniciId == null) {
+      _hataMesaji = "Kullanıcı oturumu bulunamadı.";
+      _testSonucuYukleniyor = false;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final sonuc = await _apiServisi.submitTestSonuc(kullaniciId, testId, dogruSayisi, yanlisSayisi);
+      _sonucPuan = sonuc['puan']?.toString();
+      if (sonuc['kazanilan_rozetler_detayli'] != null) {
+        _kazanilanRozetler = (sonuc['kazanilan_rozetler_detayli'] as List)
+            .map((r) => RozetModel.fromTestSonuc(r))
+            .toList();
+      }
+    } catch (e) {
+      _hataMesaji = e.toString().replaceFirst("Exception: ", "");
+    }
+    _testSonucuYukleniyor = false;
+    notifyListeners();
+  }
 
   void resetState() {
      _testSorulariModel = null;
@@ -65,7 +138,7 @@ class TestProvider with ChangeNotifier {
      _hataMesaji = null;
      _isLoading = false;
      _testSonucuYukleniyor = false;
-     print('[TestProvider] State resetlendi.');
+     // print('[TestProvider] State resetlendi.'); // Geliştirme logu
      notifyListeners();
   }
 }

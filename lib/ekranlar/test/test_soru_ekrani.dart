@@ -22,7 +22,7 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final testProvider = Provider.of<TestProvider>(context, listen: false);
-      testProvider.testiSifirla();
+      testProvider.resetState(); // Düzeltildi: testiSifirla -> resetState
       testProvider.testSorulariniGetir(widget.testId);
     });
   }
@@ -36,7 +36,7 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
   Future<bool> _onWillPop() async {
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext context) { // builder eklendi
         return AlertDialog(
           title: const Text('Testten Çıkmak İstiyor Musunuz?'),
           content: const Text('Cevaplarınız kaydedilmeyecek ve testten çıkılacaktır.'),
@@ -54,7 +54,7 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
       },
     );
     if (shouldPop ?? false) {
-      Provider.of<TestProvider>(context, listen: false).testiSifirla();
+      Provider.of<TestProvider>(context, listen: false).resetState(); // Düzeltildi
       return true;
     }
     return false;
@@ -85,7 +85,7 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
         body: _buildBody(testProvider, context),
         bottomNavigationBar: testProvider.testSorulariModel != null &&
                              !testProvider.isLoading &&
-                             testProvider.testSorulariModel!.sorular.isNotEmpty // Düzeltildi: provider -> testProvider
+                             testProvider.testSorulariModel!.sorular.isNotEmpty
             ? _buildBottomButton(testProvider, context)
             : null,
       ),
@@ -143,7 +143,7 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
             controller: _pageController,
             itemCount: provider.testSorulariModel!.sorular.length,
             onPageChanged: (index) {
-               provider.setMevcutSoruIndex(index); // Düzeltildi: provider metodu kullanıldı
+               provider.setMevcutSoruIndex(index);
             },
             itemBuilder: (context, index) {
               final SoruModel soru = provider.testSorulariModel!.sorular[index];
@@ -209,9 +209,8 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
     if (provider.testSorulariModel == null || provider.testSorulariModel!.sorular.isEmpty) {
       return const SizedBox.shrink();
     }
-
     bool cevapVerildiMi = provider.verilenCevaplar.containsKey(provider.mevcutSoru?.soruId);
-    bool sonSoruda = provider.mevcutSoruIndex == (provider.testSorulariModel!.sorular.length - 1);
+    bool sonSoruda = provider.sonSorudaMi;
 
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -219,7 +218,7 @@ class _TestSoruEkraniState extends State<TestSoruEkrani> {
         color: Renkler.kartArkaPlanRengi,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(20), // withOpacity yerine withAlpha
+            color: Colors.black.withAlpha(20),
             blurRadius: 8,
             offset: const Offset(0, -2),
           )

@@ -5,10 +5,10 @@ import '../../providerlar/profil_provider.dart';
 import '../../providerlar/navigasyon_provider.dart';
 import '../../sabitler/renkler.dart';
 import '../../sabitler/metin_stilleri.dart';
-// import '../../utils/ikon_donusturucu.dart'; // Kullanılmıyorsa kaldırılabilir (Rozet Chip'i için kullanılıyordu)
+// import '../../modeller/rozet_model.dart'; // Provider'dan geliyor, direkt import'a gerek yok
+import '../../utils/ikon_donusturucu.dart';
 import '../ana_sayfa_yonetici.dart';
-import '../../modeller/rozet_model.dart'; // RozetModel için eklendi (Chip'te kullanılıyor)
-import '../../utils/ikon_donusturucu.dart'; // Chip içindeki ikon için
+// import '../profil/profil_ekrani.dart'; // AnaSayfaYoneticisi üzerinden gidilecek
 
 class TestSonucEkrani extends StatefulWidget {
   final int testId;
@@ -37,7 +37,7 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Test Sonucunuz'), // const eklendi
+        title: const Text('Test Sonucunuz'),
         automaticallyImplyLeading: false,
       ),
       body: _buildBody(testProvider),
@@ -76,14 +76,8 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
        for (var soru in provider.testSorulariModel!.sorular) {
           int? kullaniciCevapId = provider.verilenCevaplar[soru.soruId];
           if (kullaniciCevapId != null) {
-            bool soruDogruMu = false;
-            for (var cevap in soru.cevaplar) {
-              if (cevap.cevapId == kullaniciCevapId && cevap.dogruMu) {
-                soruDogruMu = true;
-                break;
-              }
-            }
-            if (soruDogruMu) {dogruSayisi++;} else {yanlisSayisi++;} // Düzeltildi: curly braces
+            bool soruDogruMu = soru.cevaplar.any((c) => c.cevapId == kullaniciCevapId && c.dogruMu);
+            if (soruDogruMu) {dogruSayisi++;} else {yanlisSayisi++;}
           } else {
             yanlisSayisi++;
           }
@@ -153,7 +147,7 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
             icon: const Icon(Icons.home_outlined),
             label: const Text('Ana Sayfaya Dön'),
             onPressed: () {
-               Provider.of<TestProvider>(context, listen: false).testiSifirla();
+               Provider.of<TestProvider>(context, listen: false).resetState(); // Düzeltildi
                Provider.of<NavigasyonProvider>(context, listen: false).seciliIndexAta(1);
                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const AnaSayfaYoneticisi()),
@@ -167,7 +161,7 @@ class _TestSonucEkraniState extends State<TestSonucEkrani> {
             icon: const Icon(Icons.person_outline),
             label: const Text('Profilime Git'),
             onPressed: () {
-              Provider.of<TestProvider>(context, listen: false).testiSifirla();
+              Provider.of<TestProvider>(context, listen: false).resetState(); // Düzeltildi
               Provider.of<NavigasyonProvider>(context, listen: false).seciliIndexAta(3);
               Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const AnaSayfaYoneticisi()),
