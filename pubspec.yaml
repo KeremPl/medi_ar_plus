@@ -1,0 +1,42 @@
+name: mediar_plus
+description: İlk yardım eğitim ve test uygulaması.
+publish_to: 'none' # Bu satırı kaldırın eğer paketi pub.dev'de yayınlamayı düşünüyorsanız
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  http: ^1.2.1 # HTTP istekleri için
+  provider: ^6.0.5 # State management için
+  shared_preferences: ^2.2.0 # Yerel depolama için
+  flutter_svg: ^2.0.7 # SVG göstermek için
+  # AR modülü için arkadaşının ekleyeceği paketler buraya gelebilir
+  # Örneğin: ar_flutter_plugin, unity_widget vb.
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    # Eğer uygulama içinde sabit SVG veya imaj kullanılacaksa buraya eklenecek
+    # Örn: assets/images/app_logo.png
+    # Örn: assets/svgs/placeholder_icon.svg
+    - assets/images/
+    - assets/svgs/
+    # - assets/fonts/ # Özel fontlar için
+
+  # fonts:
+  #   - family: Montserrat
+  #     fonts:
+  #       - asset: assets/fonts/Montserrat-Regular.ttf
+  #       - asset: assets/fonts/Montserrat-Bold.ttf
+  #         weight: 700
