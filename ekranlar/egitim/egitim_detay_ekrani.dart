@@ -304,7 +304,7 @@ class _EgitimDetayEkraniState extends State<EgitimDetayEkrani> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (_) => EgitimTamamlamaEkrani(
+                builder: (_) => EgitimTamamlamaEkrani( // BU ÇAĞRI HATA VERİYOR OLABİLİR
                   egitimAdi: widget.egitimAdi, // Tamamlama ekranına eğitim adını ve test ID'sini geçirir.
                   testId: widget.testId,
                 ),
