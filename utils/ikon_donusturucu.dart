@@ -39,14 +39,15 @@ class IkonDonusturucu {
       case 'health_and_safety': // Sağlık ve güvenlik.
         return Icons.health_and_safety_outlined;
       case 'local_fire_department': // Yangın veya acil durum.
-        return Icons.local_fire_department_outlined;
+         return Icons.local_fire_department_outlined;
       case 'bloodtype': // Kan grubu veya kan bağışı.
-        return Icons.bloodtype_outlined;
+         return Icons.bloodtype_outlined;
       case 'healing': // İyileşme, tedavi.
-        return Icons.healing_outlined;
+         return Icons.healing_outlined;
 
       // Başarı ve Rozet İkonları
       case 'military_tech': // Askeri teknoloji veya madalya benzeri bir başarı.
+        return Icons.military_tech; // _outlined olmayan versiyonu da var, API'ye göre seçilmeli
       case 'emoji_events': // Kupa, ödül.
         return Icons.emoji_events_outlined;
       case 'star':
@@ -80,4 +81,26 @@ class IkonDonusturucu {
       case 'arrow_back_ios': // Geri ok (iOS stili).
         return Icons.arrow_back_ios_new;
       case 'arrow_forward':
-      case 'arrow
+      case 'arrow_forward_ios': // İleri ok (iOS stili).
+        return Icons.arrow_forward_ios;
+      case 'done': // Tamamlandı, onay.
+        return Icons.done;
+      case 'close': // Kapat, iptal.
+        return Icons.close;
+      case 'error': // Hata.
+        return Icons.error_outline;
+      case 'warning': // Uyarı.
+        return Icons.warning_amber_outlined;
+      case 'visibility': // Görünür.
+        return Icons.visibility_outlined;
+      case 'visibility_off': // Gizli.
+        return Icons.visibility_off_outlined;
+
+      // Eşleşen bir ikon bulunamazsa varsayılan ikonu döndür.
+      default:
+        // Geliştirme sırasında bilinmeyen ikon adlarını loglamak faydalı olabilir.
+        // print("Uyarı: Bilinmeyen ikon adı '$iconName', varsayılan ikon (help_outline) kullanılıyor.");
+        return Icons.help_outline;
+    }
+  }
+}
