@@ -2,7 +2,8 @@ class EgitimModel {
   final int egitimId;
   final String egitimAdi;
   final String? egitimKapakVector;
-  final int testId; // API'den int geldiği teyit edildi, String parse'a gerek kalmadı
+  final int
+      testId; // API'den int geldiği teyit edildi, String parse'a gerek kalmadı
   final String? testIconAdi;
 
   EgitimModel({
@@ -20,7 +21,9 @@ class EgitimModel {
       egitimKapakVector: json['egitim_kapak_vector'] as String?,
       // testid API yanıtında int olarak geliyor, doğrudan cast edilebilir.
       // Ama emin olmak için tryParse yine de iyi bir önlem olabilir.
-      testId: json['testid'] is int ? json['testid'] as int : int.tryParse(json['testid'].toString()) ?? 0,
+      testId: json['testid'] is int
+          ? json['testid'] as int
+          : int.tryParse(json['testid'].toString()) ?? 0,
       testIconAdi: json['test_icon_adi'] as String?,
     );
   }

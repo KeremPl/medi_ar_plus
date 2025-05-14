@@ -25,7 +25,8 @@ class RozetModel {
       rozetId: json['rozetid'] as int?,
       rozetAdi: json['rozetadi'] as String,
       rozetIconAdi: json['rozet_icon_adi'] as String?,
-      rozetAciklama: json['rozetaciklama'] as String?, // API'den gelen 'rozetaciklama'
+      rozetAciklama:
+          json['rozetaciklama'] as String?, // API'den gelen 'rozetaciklama'
       kazanmaTarihi: json['kazanma_tarihi'] as String?,
     );
   }

@@ -8,7 +8,6 @@ import 'egitim/egitim_listesi_ekrani.dart';
 import 'test/test_listesi_ekrani.dart';
 import 'profil/profil_ekrani.dart';
 
-
 class AnaSayfaYoneticisi extends StatelessWidget {
   const AnaSayfaYoneticisi({super.key});
 
@@ -20,7 +19,7 @@ class AnaSayfaYoneticisi extends StatelessWidget {
   ];
 
   final List<BottomNavigationBarItem> _navBarItems = const [
-     BottomNavigationBarItem(
+    BottomNavigationBarItem(
       icon: Icon(Icons.camera_alt_outlined),
       activeIcon: Icon(Icons.camera_alt),
       label: 'AR',
