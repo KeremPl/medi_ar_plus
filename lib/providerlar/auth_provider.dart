@@ -35,7 +35,7 @@ class AuthProvider with ChangeNotifier {
         try {
           _mevcutKullanici = KullaniciModel.fromJson(jsonDecode(kullaniciJson)); // jsonDecode kullanıldı
         } catch (e) {
-          // print("Kaydedilmiş kullanıcı detayı okunamadı: $e"); // Kaldırıldı
+          print("Kaydedilmiş kullanıcı detayı okunamadı: $e"); 
           await cikisYap();
         }
       }

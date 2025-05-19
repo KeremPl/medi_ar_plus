@@ -4,8 +4,7 @@ class KullaniciModel {
   final String soyad;
   final String kullaniciAdi;
   final String email;
-  // API'den kayit_tarihi gelmiyor, bu yüzden modelde de olmayabilir
-  // Veya API'den geliyorsa eklenmeli. Şimdilik login yanıtına göre.
+
 
   KullaniciModel({
     required this.id,
