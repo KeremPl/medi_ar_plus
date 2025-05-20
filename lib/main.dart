@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'ekranlar/auth/login_ekrani.dart';
-import 'ekranlar/ana_sayfa_yonetici.dart'; // Yeni ana ekran
+import 'ekranlar/ana_sayfa_yonetici.dart'; 
 import 'providerlar/auth_provider.dart';
 import 'providerlar/egitim_provider.dart';
 import 'providerlar/egitim_detay_provider.dart';
 import 'providerlar/test_provider.dart';
 import 'providerlar/profil_provider.dart';
-import 'providerlar/navigasyon_provider.dart'; // Eklendi
+import 'providerlar/navigasyon_provider.dart'; 
 import 'sabitler/tema.dart';
 
 void main() async {
@@ -19,7 +19,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider(prefs)),
-        ChangeNotifierProvider(create: (_) => NavigasyonProvider()), // Eklendi
+        ChangeNotifierProvider(create: (_) => NavigasyonProvider()), 
         ChangeNotifierProvider(create: (_) => EgitimProvider()),
         ChangeNotifierProvider(create: (_) => EgitimDetayProvider()),
         ChangeNotifierProvider(create: (_) => TestProvider(prefs)),

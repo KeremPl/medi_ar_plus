@@ -11,7 +11,7 @@ import 'profil/profil_ekrani.dart';
 class AnaSayfaYoneticisi extends StatelessWidget {
   const AnaSayfaYoneticisi({super.key});
 
-  static const List<Widget> _ekranSecenekleri = <Widget>[
+  static  List<Widget> _ekranSecenekleri = <Widget>[
     ArEkrani(),
     EgitimListesiEkrani(),
     TestListesiEkrani(),
